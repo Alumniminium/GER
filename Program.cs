@@ -34,7 +34,7 @@ var app = builder.Build();
 
 // Log startup info
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
-logger.LogInformation("GER RAG MCP Server starting...");
+logger.LogInformation("GER - Grid Enhanced Retrieval starting...");
 logger.LogInformation("Ollama URL: {OllamaUrl}", ollamaUrl);
 logger.LogInformation("Ollama Model: {OllamaModel}", ollamaModel);
 logger.LogInformation("Storage Path: {StoragePath}", storagePath);
@@ -45,7 +45,7 @@ app.MapMcp("/mcp");
 // Add a simple health check endpoint
 app.MapGet("/", () => Results.Ok(new
 {
-    service = "GER RAG MCP Server",
+    service = "GER - Grid Enhanced Retrieval",
     version = "1.0.0",
     transport = "Streamable HTTP",
     endpoints = new { mcp = "/mcp" }

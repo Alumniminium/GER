@@ -1,4 +1,4 @@
-# GER - C# RAG MCP Server
+# GER - Grid Enhanced Retrieval
 
 A Model Context Protocol (MCP) server that provides Retrieval-Augmented Generation (RAG) capabilities using Ollama embeddings.
 
