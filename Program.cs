@@ -28,6 +28,7 @@ builder.Services.AddSingleton<RagTools>();
 // Configure MCP server with HTTP transport
 builder.Services
     .AddMcpServer()
+    .WithHttpTransport()
     .WithToolsFromAssembly();
 
 var app = builder.Build();
