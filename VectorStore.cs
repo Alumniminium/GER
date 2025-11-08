@@ -4,7 +4,7 @@ namespace GER;
 
 public class VectorStore
 {
-    private readonly List<Chunk> _chunks = new();
+    private readonly List<Chunk> _chunks = [];
     private readonly string _storagePath;
 
     public VectorStore(string storagePath)
@@ -55,15 +55,9 @@ public class VectorStore
             .ToList();
     }
 
-    public void RemoveDocument(string documentId)
-    {
-        _chunks.RemoveAll(c => c.DocumentId == documentId);
-    }
+    public void RemoveDocument(string documentId) => _chunks.RemoveAll(c => c.DocumentId == documentId);
 
-    public void Clear()
-    {
-        _chunks.Clear();
-    }
+    public void Clear() => _chunks.Clear();
 
     public int Count => _chunks.Count;
 

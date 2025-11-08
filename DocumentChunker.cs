@@ -1,17 +1,8 @@
 namespace GER;
 
-public class DocumentChunker
+public class DocumentChunker(int chunkSize = 512, int chunkOverlap = 128)
 {
-    private readonly int _chunkSize;
-    private readonly int _chunkOverlap;
-
-    public DocumentChunker(int chunkSize = 512, int chunkOverlap = 128)
-    {
-        _chunkSize = chunkSize;
-        _chunkOverlap = chunkOverlap;
-    }
-
-    public List<Chunk> ChunkDocument(string content, string documentId, Dictionary<string, string>? metadata = null)
+    public List<Chunk> ChunkDocument(string content, string documentId)
     {
         var chunks = new List<Chunk>();
         var sentences = SplitIntoSentences(content);
@@ -24,7 +15,7 @@ public class DocumentChunker
         {
             var sentenceLength = sentence.Length;
 
-            if (currentLength + sentenceLength > _chunkSize && currentChunk.Count > 0)
+            if (currentLength + sentenceLength > chunkSize && currentChunk.Count > 0)
             {
                 // Create chunk from current sentences
                 var chunkText = string.Join(" ", currentChunk);
@@ -34,7 +25,6 @@ public class DocumentChunker
                     DocumentId = documentId,
                     Text = chunkText,
                     Index = chunkIndex,
-                    Metadata = metadata ?? new Dictionary<string, string>()
                 });
 
                 chunkIndex++;
@@ -45,7 +35,7 @@ public class DocumentChunker
 
                 for (int i = currentChunk.Count - 1; i >= 0; i--)
                 {
-                    if (overlapLength + currentChunk[i].Length <= _chunkOverlap)
+                    if (overlapLength + currentChunk[i].Length <= chunkOverlap)
                     {
                         overlapSentences.Insert(0, currentChunk[i]);
                         overlapLength += currentChunk[i].Length;
@@ -73,15 +63,14 @@ public class DocumentChunker
                 Id = $"{documentId}_chunk_{chunkIndex}",
                 DocumentId = documentId,
                 Text = chunkText,
-                Index = chunkIndex,
-                Metadata = metadata ?? new Dictionary<string, string>()
+                Index = chunkIndex
             });
         }
 
         return chunks;
     }
 
-    private List<string> SplitIntoSentences(string text)
+    private static List<string> SplitIntoSentences(string text)
     {
         // Simple sentence splitting - can be improved with better NLP
         var sentences = new List<string>();
@@ -125,6 +114,5 @@ public class Chunk
     public string DocumentId { get; set; } = string.Empty;
     public string Text { get; set; } = string.Empty;
     public int Index { get; set; }
-    public Dictionary<string, string> Metadata { get; set; } = new();
     public float[]? Embedding { get; set; }
 }

@@ -4,25 +4,73 @@ using ModelContextProtocol.Server;
 namespace GER;
 
 [McpServerToolType]
-public class RagTools
+public class RagTools(RagService ragService)
 {
-    private readonly RagService _ragService;
+    public static List<OllamaTool> GetRagTools() =>
+        [
+            new OllamaTool
+            {
+                Function = new ToolFunction
+                {
+                    Name = "search",
+                    Description = "Search for relevant document chunks based on a query.",
+                    Parameters = new ToolParameters
+                    {
+                        Properties = new Dictionary<string, ToolProperty>
+                        {
+                            ["query"] = new ToolProperty { Type = "string", Description = "Search query to find relevant document chunks" },
+                            ["topK"] = new ToolProperty { Type = "integer", Description = "Number of top results to return (default: 5)" }
+                        },
+                        Required = ["query"]
+                    }
+                }
+            },
+            new OllamaTool
+            {
+                Function = new ToolFunction
+                {
+                    Name = "retrieve_context",
+                    Description = "Retrieve formatted context for a query. Returns the most relevant document chunks formatted for use in prompts.",
+                    Parameters = new ToolParameters
+                    {
+                        Properties = new Dictionary<string, ToolProperty>
+                        {
+                            ["query"] = new ToolProperty { Type = "string", Description = "Query to retrieve relevant context for" },
+                            ["topK"] = new ToolProperty { Type = "integer", Description = "Number of top results to include in context (default: 5)" }
+                        },
+                        Required = ["query"]
+                    }
+                }
+            },
+        ];
 
-    public RagTools(RagService ragService)
-    {
-        _ragService = ragService;
-    }
 
     [McpServerTool]
-    [Description("Index a document into the RAG system. Chunks the document and creates embeddings for retrieval.")]
-    public async Task<string> IndexDocument(
-        [Description("Unique identifier for the document")] string documentId,
-        [Description("Content of the document to index")] string content,
-        CancellationToken cancellationToken = default)
+    [Description("Index a document into the RAG system. Chunks the document and creates embeddings for retrieval. Provide either content directly or a filePath to read from.")]
+    public async Task<string> IndexDocument([Description("Unique identifier for the document")] string documentId, [Description("Content of the document to index (optional if filePath is provided)")] string? content = null, [Description("Path to a file to index (optional if content is provided)")] string? filePath = null, CancellationToken cancellationToken = default)
     {
         try
         {
-            var result = await _ragService.IndexDocumentAsync(documentId, content, null, cancellationToken);
+            string documentContent;
+
+            // Validate that at least one source is provided
+            if (string.IsNullOrEmpty(content) && string.IsNullOrEmpty(filePath))
+            {
+                return "Error: Either 'content' or 'filePath' must be provided.";
+            }
+
+            // If filePath is provided, read the file
+            if (!string.IsNullOrEmpty(filePath))
+            {
+                if (!File.Exists(filePath))
+                    return $"Error: File not found at path: {filePath}";
+
+                documentContent = await File.ReadAllTextAsync(filePath, cancellationToken);
+            }
+            else
+                documentContent = content!;
+
+            var result = await ragService.IndexDocumentAsync(documentId, documentContent, cancellationToken);
             return result;
         }
         catch (Exception ex)
@@ -33,32 +81,12 @@ public class RagTools
 
     [McpServerTool]
     [Description("Search for relevant document chunks based on a query.")]
-    public async Task<string> Search(
-        [Description("Search query to find relevant document chunks")] string query,
-        [Description("Number of top results to return (default: 5)")] int topK = 5,
-        CancellationToken cancellationToken = default)
+    public async Task<string> Search([Description("Search query to find relevant document chunks")] string query, [Description("Number of top results to return (default: 2)")] int topK = 2, CancellationToken cancellationToken = default)
     {
         try
         {
-            var results = await _ragService.SearchAsync(query, topK, cancellationToken);
-
-            if (results.Count == 0)
-            {
-                return "No results found.";
-            }
-
-            var output = $"Found {results.Count} results:\n\n";
-            for (int i = 0; i < results.Count; i++)
-            {
-                var result = results[i];
-                output += $"[{i + 1}] Score: {result.Score:F4}\n";
-                output += $"Document: {result.Chunk.DocumentId}\n";
-                output += $"Chunk ID: {result.Chunk.Id}\n";
-                output += $"Text: {result.Chunk.Text}\n\n";
-                output += "---\n\n";
-            }
-
-            return output;
+            var results = await ragService.SearchAsync(query, topK, cancellationToken);
+            return ragService.FormatSearchResults(results);
         }
         catch (Exception ex)
         {
@@ -68,14 +96,11 @@ public class RagTools
 
     [McpServerTool]
     [Description("Retrieve formatted context for a query. Returns the most relevant document chunks formatted for use in prompts.")]
-    public async Task<string> RetrieveContext(
-        [Description("Query to retrieve relevant context for")] string query,
-        [Description("Number of top results to include in context (default: 5)")] int topK = 5,
-        CancellationToken cancellationToken = default)
+    public async Task<string> RetrieveContext([Description("Query to retrieve relevant context for")] string query, [Description("Number of top results to include in context (default: 2)")] int topK = 2, CancellationToken cancellationToken = default)
     {
         try
         {
-            var context = await _ragService.RetrieveContextAsync(query, topK, cancellationToken);
+            var context = await ragService.RetrieveContextAsync(query, topK, cancellationToken);
             return context;
         }
         catch (Exception ex)
@@ -91,7 +116,7 @@ public class RagTools
     {
         try
         {
-            _ragService.RemoveDocument(documentId);
+            ragService.RemoveDocument(documentId);
             return $"Removed document: {documentId}";
         }
         catch (Exception ex)
@@ -106,7 +131,7 @@ public class RagTools
     {
         try
         {
-            _ragService.ClearIndex();
+            ragService.ClearIndex();
             return "Index cleared successfully.";
         }
         catch (Exception ex)
@@ -121,12 +146,62 @@ public class RagTools
     {
         try
         {
-            var count = _ragService.GetDocumentCount();
+            var count = ragService.GetDocumentCount();
             return $"Total chunks in index: {count}";
         }
         catch (Exception ex)
         {
             return $"Error getting stats: {ex.Message}";
+        }
+    }
+
+    [McpServerTool]
+    [Description("Ask the RAG agent a question. The agent will search the knowledge base, retrieve relevant context, and generate a comprehensive answer using AI.")]
+    public async Task<string> AskAgent([Description("The question to ask the RAG agent")] string query, [Description("Number of document chunks to retrieve for context (default: 2)")] int topK = 2, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await ragService.AskAsync(query, topK, cancellationToken);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            return $"Error asking agent: {ex.Message}";
+        }
+    }
+
+    [McpServerTool]
+    [Description("Update the system prompt used by the agentic RAG system. This changes how the agent responds to queries. Pass null or empty string to reset to default.")]
+    public static string SetSystemPrompt([Description("The new system prompt to use. Leave empty to reset to default.")] string? newPrompt = null)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(newPrompt))
+            {
+                SystemPromptManager.ResetToDefault();
+                return "System prompt reset to default.";
+            }
+
+            SystemPromptManager.SetSystemPrompt(newPrompt);
+            return $"System prompt updated successfully. New prompt length: {newPrompt.Length} characters.";
+        }
+        catch (Exception ex)
+        {
+            return $"Error setting system prompt: {ex.Message}";
+        }
+    }
+
+    [McpServerTool]
+    [Description("Get the current system prompt used by the agentic RAG system.")]
+    public static string GetSystemPrompt()
+    {
+        try
+        {
+            return SystemPromptManager.GetSystemPrompt();
+        }
+        catch (Exception ex)
+        {
+            return $"Error getting system prompt: {ex.Message}";
         }
     }
 }
