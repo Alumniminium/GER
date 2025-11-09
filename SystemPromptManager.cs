@@ -1,4 +1,3 @@
-
 using System.ComponentModel;
 using ModelContextProtocol.Server;
 
@@ -21,7 +20,8 @@ public static class SystemPromptManager
 
     private static string _systemPrompt = DefaultSystemPrompt;
 
-    public const string DefaultSystemPrompt = @"You are a helpful AI assistant with access to a knowledge base.
+    public const string DefaultSystemPrompt =
+        @"You are a helpful AI assistant with access to a knowledge base.
 Your task is to answer the user's question based on the provided context from the knowledge base.
 
 Instructions:

@@ -6,8 +6,7 @@ namespace GER;
 [McpServerToolType]
 public class RagTools(RagService ragService)
 {
-    public static List<OllamaTool> GetRagTools() =>
-        [
+    public static List<OllamaTool> GetRagTools() => [
             new OllamaTool
             {
                 Function = new ToolFunction
@@ -18,36 +17,59 @@ public class RagTools(RagService ragService)
                     {
                         Properties = new Dictionary<string, ToolProperty>
                         {
-                            ["query"] = new ToolProperty { Type = "string", Description = "Search query to find relevant document chunks" },
-                            ["topK"] = new ToolProperty { Type = "integer", Description = "Number of top results to return (default: 5)" }
+                            ["query"] = new ToolProperty
+                            {
+                                Type = "string",
+                                Description = "Search query to find relevant document chunks",
+                            },
+                            ["topK"] = new ToolProperty
+                            {
+                                Type = "integer",
+                                Description = "Number of top results to return (default: 5)",
+                            },
                         },
-                        Required = ["query"]
-                    }
-                }
+                        Required = ["query"],
+                    },
+                },
             },
             new OllamaTool
             {
                 Function = new ToolFunction
                 {
                     Name = "retrieve_context",
-                    Description = "Retrieve formatted context for a query. Returns the most relevant document chunks formatted for use in prompts.",
+                    Description =
+                        "Retrieve formatted context for a query. Returns the most relevant document chunks formatted for use in prompts.",
                     Parameters = new ToolParameters
                     {
                         Properties = new Dictionary<string, ToolProperty>
                         {
-                            ["query"] = new ToolProperty { Type = "string", Description = "Query to retrieve relevant context for" },
-                            ["topK"] = new ToolProperty { Type = "integer", Description = "Number of top results to include in context (default: 5)" }
+                            ["query"] = new ToolProperty
+                            {
+                                Type = "string",
+                                Description = "Query to retrieve relevant context for",
+                            },
+                            ["topK"] = new ToolProperty
+                            {
+                                Type = "integer",
+                                Description = "Number of top results to include in context (default: 5)",
+                            },
                         },
-                        Required = ["query"]
-                    }
-                }
+                        Required = ["query"],
+                    },
+                },
             },
         ];
 
-
     [McpServerTool]
-    [Description("Index a document into the RAG system. Chunks the document and creates embeddings for retrieval. Provide either content directly or a filePath to read from.")]
-    public async Task<string> IndexDocument([Description("Unique identifier for the document")] string documentId, [Description("Content of the document to index (optional if filePath is provided)")] string? content = null, [Description("Path to a file to index (optional if content is provided)")] string? filePath = null, CancellationToken cancellationToken = default)
+    [Description(
+        "Index a document into the RAG system. Chunks the document and creates embeddings for retrieval. Provide either content directly or a filePath to read from."
+    )]
+    public async Task<string> IndexDocument(
+        [Description("Unique identifier for the document")] string documentId,
+        [Description("Content of the document to index (optional if filePath is provided)")] string? content = null,
+        [Description("Path to a file to index (optional if content is provided)")] string? filePath = null,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
@@ -68,7 +90,9 @@ public class RagTools(RagService ragService)
                 documentContent = await File.ReadAllTextAsync(filePath, cancellationToken);
             }
             else
+            {
                 documentContent = content!;
+            }
 
             var result = await ragService.IndexDocumentAsync(documentId, documentContent, cancellationToken);
             return result;
@@ -81,7 +105,11 @@ public class RagTools(RagService ragService)
 
     [McpServerTool]
     [Description("Search for relevant document chunks based on a query.")]
-    public async Task<string> Search([Description("Search query to find relevant document chunks")] string query, [Description("Number of top results to return (default: 2)")] int topK = 2, CancellationToken cancellationToken = default)
+    public async Task<string> Search(
+        [Description("Search query to find relevant document chunks")] string query,
+        [Description("Number of top results to return (default: 2)")] int topK = 2,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
@@ -95,8 +123,14 @@ public class RagTools(RagService ragService)
     }
 
     [McpServerTool]
-    [Description("Retrieve formatted context for a query. Returns the most relevant document chunks formatted for use in prompts.")]
-    public async Task<string> RetrieveContext([Description("Query to retrieve relevant context for")] string query, [Description("Number of top results to include in context (default: 2)")] int topK = 2, CancellationToken cancellationToken = default)
+    [Description(
+        "Retrieve formatted context for a query. Returns the most relevant document chunks formatted for use in prompts."
+    )]
+    public async Task<string> RetrieveContext(
+        [Description("Query to retrieve relevant context for")] string query,
+        [Description("Number of top results to include in context (default: 2)")] int topK = 2,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
@@ -111,8 +145,7 @@ public class RagTools(RagService ragService)
 
     [McpServerTool]
     [Description("Remove a document from the index.")]
-    public string RemoveDocument(
-        [Description("Document ID to remove")] string documentId)
+    public string RemoveDocument([Description("Document ID to remove")] string documentId)
     {
         try
         {
@@ -156,8 +189,14 @@ public class RagTools(RagService ragService)
     }
 
     [McpServerTool]
-    [Description("Ask the RAG agent a question. The agent will search the knowledge base, retrieve relevant context, and generate a comprehensive answer using AI.")]
-    public async Task<string> AskAgent([Description("The question to ask the RAG agent")] string query, [Description("Number of document chunks to retrieve for context (default: 2)")] int topK = 2, CancellationToken cancellationToken = default)
+    [Description(
+        "Ask the RAG agent a question. The agent will search the knowledge base, retrieve relevant context, and generate a comprehensive answer using AI."
+    )]
+    public async Task<string> AskAgent(
+        [Description("The question to ask the RAG agent")] string query,
+        [Description("Number of document chunks to retrieve for context (default: 2)")] int topK = 2,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
@@ -171,8 +210,12 @@ public class RagTools(RagService ragService)
     }
 
     [McpServerTool]
-    [Description("Update the system prompt used by the agentic RAG system. This changes how the agent responds to queries. Pass null or empty string to reset to default.")]
-    public static string SetSystemPrompt([Description("The new system prompt to use. Leave empty to reset to default.")] string? newPrompt = null)
+    [Description(
+        "Update the system prompt used by the agentic RAG system. This changes how the agent responds to queries. Pass null or empty string to reset to default."
+    )]
+    public static string SetSystemPrompt(
+        [Description("The new system prompt to use. Leave empty to reset to default.")] string? newPrompt = null
+    )
     {
         try
         {

@@ -1,17 +1,17 @@
+using GER;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.AspNetCore;
-using ModelContextProtocol.Server;
-using GER;
 
 // Configuration
 var ollamaUrl = Environment.GetEnvironmentVariable("OLLAMA_URL") ?? "http://localhost:11434";
 var ollamaModel = Environment.GetEnvironmentVariable("OLLAMA_MODEL") ?? "mxbai-embed-large";
 var chatModel = Environment.GetEnvironmentVariable("OLLAMA_CHAT_MODEL") ?? "qwen3:1.7b";
-var storagePath = Environment.GetEnvironmentVariable("GER_STORAGE_PATH") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ger", "index.json");
+var storagePath =
+    Environment.GetEnvironmentVariable("GER_STORAGE_PATH")
+    ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ger", "index.json");
 
 // Check if stdio mode is requested
 var useStdio = args.Contains("--stdio") || args.Contains("-s");
@@ -37,16 +37,13 @@ if (useStdio)
         ollamaClient,
         sp.GetRequiredService<VectorStore>(),
         sp.GetRequiredService<ILogger<RagService>>(),
-        chatModel));
+        chatModel
+    ));
     builder.Services.AddSingleton<RagTools>();
     builder.Services.AddSingleton<SystemPromptManager.SystemPromptResource>();
 
     // Configure MCP server with stdio transport
-    builder.Services
-        .AddMcpServer()
-        .WithStdioServerTransport()
-        .WithToolsFromAssembly()
-        .WithResourcesFromAssembly();
+    builder.Services.AddMcpServer().WithStdioServerTransport().WithToolsFromAssembly().WithResourcesFromAssembly();
 
     var host = builder.Build();
 
@@ -77,16 +74,13 @@ else
         ollamaClient,
         sp.GetRequiredService<VectorStore>(),
         sp.GetRequiredService<ILogger<RagService>>(),
-        chatModel));
+        chatModel
+    ));
     builder.Services.AddSingleton<RagTools>();
     builder.Services.AddSingleton<SystemPromptManager.SystemPromptResource>();
 
     // Configure MCP server with HTTP transport
-    builder.Services
-        .AddMcpServer()
-        .WithHttpTransport()
-        .WithToolsFromAssembly()
-        .WithResourcesFromAssembly();
+    builder.Services.AddMcpServer().WithHttpTransport().WithToolsFromAssembly().WithResourcesFromAssembly();
 
     var app = builder.Build();
 
@@ -102,13 +96,21 @@ else
     app.MapMcp("/mcp");
 
     // Add a simple health check endpoint
-    app.MapGet("/", () => Results.Ok(new
-    {
-        service = "GER - Grid Enhanced Retrieval",
-        version = "1.0.0",
-        transport = "Streamable HTTP",
-        endpoints = new { mcp = "/mcp" }
-    }));
+    app.MapGet(
+        "/",
+        () =>     Results.Ok(
+                new
+                {
+                    service = "GER - Grid Enhanced Retrieval",
+                    version = "1.0.0",
+                    transport = "Streamable HTTP",
+                    endpoints = new
+                    {
+                        mcp = "/mcp"
+                    },
+                }
+            )
+    );
 
     var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
     logger.LogInformation("Server listening on http://localhost:{Port}", port);
@@ -118,4 +120,6 @@ else
 }
 
 // Make Program accessible for testing
-public partial class Program { }
+public partial class Program
+{
+}

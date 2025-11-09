@@ -19,13 +19,15 @@ public class DocumentChunker(int chunkSize = 512, int chunkOverlap = 128)
             {
                 // Create chunk from current sentences
                 var chunkText = string.Join(" ", currentChunk);
-                chunks.Add(new Chunk
-                {
-                    Id = $"{documentId}_chunk_{chunkIndex}",
-                    DocumentId = documentId,
-                    Text = chunkText,
-                    Index = chunkIndex,
-                });
+                chunks.Add(
+                    new Chunk
+                    {
+                        Id = $"{documentId}_chunk_{chunkIndex}",
+                        DocumentId = documentId,
+                        Text = chunkText,
+                        Index = chunkIndex,
+                    }
+                );
 
                 chunkIndex++;
 
@@ -58,13 +60,15 @@ public class DocumentChunker(int chunkSize = 512, int chunkOverlap = 128)
         if (currentChunk.Count > 0)
         {
             var chunkText = string.Join(" ", currentChunk);
-            chunks.Add(new Chunk
-            {
-                Id = $"{documentId}_chunk_{chunkIndex}",
-                DocumentId = documentId,
-                Text = chunkText,
-                Index = chunkIndex
-            });
+            chunks.Add(
+                new Chunk
+                {
+                    Id = $"{documentId}_chunk_{chunkIndex}",
+                    DocumentId = documentId,
+                    Text = chunkText,
+                    Index = chunkIndex,
+                }
+            );
         }
 
         return chunks;
@@ -85,8 +89,7 @@ public class DocumentChunker(int chunkSize = 512, int chunkOverlap = 128)
 
             foreach (var ending in sentenceEndings)
             {
-                if (i + ending.Length <= text.Length &&
-                    text.Substring(i, ending.Length) == ending)
+                if (i + ending.Length <= text.Length && text.Substring(i, ending.Length) == ending)
                 {
                     currentSentence += ending.Substring(1);
                     sentences.Add(currentSentence.Trim());

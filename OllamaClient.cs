@@ -18,11 +18,7 @@ public class OllamaClient
 
     public async Task<float[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default)
     {
-        var request = new EmbedRequest
-        {
-            Model = _model,
-            Input = text
-        };
+        var request = new EmbedRequest { Model = _model, Input = text };
 
         var response = await _httpClient.PostAsJsonAsync("/api/embed", request, cancellationToken);
         response.EnsureSuccessStatusCode();
@@ -37,13 +33,12 @@ public class OllamaClient
         return result.Embeddings[0];
     }
 
-    public async Task<List<float[]>> GetEmbeddingsAsync(IEnumerable<string> texts, CancellationToken cancellationToken = default)
+    public async Task<List<float[]>> GetEmbeddingsAsync(
+        IEnumerable<string> texts,
+        CancellationToken cancellationToken = default
+    )
     {
-        var request = new EmbedRequest
-        {
-            Model = _model,
-            Input = texts.ToArray()
-        };
+        var request = new EmbedRequest { Model = _model, Input = texts.ToArray() };
 
         var response = await _httpClient.PostAsJsonAsync("/api/embed", request, cancellationToken);
         response.EnsureSuccessStatusCode();
@@ -58,7 +53,12 @@ public class OllamaClient
         return result.Embeddings;
     }
 
-    public async Task<string> GenerateResponseAsync(string systemPrompt, string userPrompt, string chatModel, CancellationToken cancellationToken = default)
+    public async Task<string> GenerateResponseAsync(
+        string systemPrompt,
+        string userPrompt,
+        string chatModel,
+        CancellationToken cancellationToken = default
+    )
     {
         var request = new ChatRequest
         {
@@ -66,9 +66,9 @@ public class OllamaClient
             Messages =
             [
                 new() { Role = "system", Content = systemPrompt },
-                new() { Role = "user", Content = userPrompt }
+                new() { Role = "user", Content = userPrompt },
             ],
-            Stream = false
+            Stream = false,
         };
 
         var response = await _httpClient.PostAsJsonAsync("/api/chat", request, cancellationToken);
@@ -84,14 +84,19 @@ public class OllamaClient
         return result.Message.Content;
     }
 
-    public async Task<ChatResponse> GenerateResponseWithToolsAsync(List<ChatMessage> messages, string chatModel, List<OllamaTool>? tools = null, CancellationToken cancellationToken = default)
+    public async Task<ChatResponse> GenerateResponseWithToolsAsync(
+        List<ChatMessage> messages,
+        string chatModel,
+        List<OllamaTool>? tools = null,
+        CancellationToken cancellationToken = default
+    )
     {
         var request = new ChatRequest
         {
             Model = chatModel,
             Messages = messages,
             Tools = tools,
-            Stream = false
+            Stream = false,
         };
 
         var response = await _httpClient.PostAsJsonAsync("/api/chat", request, cancellationToken);
@@ -107,7 +112,12 @@ public class OllamaClient
         return result;
     }
 
-    public async IAsyncEnumerable<string> GenerateResponseStreamAsync(string systemPrompt, string userPrompt, string chatModel, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<string> GenerateResponseStreamAsync(
+        string systemPrompt,
+        string userPrompt,
+        string chatModel,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default
+    )
     {
         var request = new ChatRequest
         {
@@ -115,17 +125,21 @@ public class OllamaClient
             Messages =
             [
                 new() { Role = "system", Content = systemPrompt },
-                new() { Role = "user", Content = userPrompt }
+                new() { Role = "user", Content = userPrompt },
             ],
-            Stream = true
+            Stream = true,
         };
 
         var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/chat")
         {
-            Content = JsonContent.Create(request)
+            Content = JsonContent.Create(request),
         };
 
-        using var response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        using var response = await _httpClient.SendAsync(
+            httpRequest,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken
+        );
         response.EnsureSuccessStatusCode();
 
         using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);

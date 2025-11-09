@@ -39,20 +39,14 @@ public class VectorStore
 
         foreach (var chunk in _chunks)
         {
-            if (chunk.Embedding == null) continue;
+            if (chunk.Embedding == null)
+                continue;
 
             var similarity = CosineSimilarity(queryEmbedding, chunk.Embedding);
-            results.Add(new SearchResult
-            {
-                Chunk = chunk,
-                Score = similarity
-            });
+            results.Add(new SearchResult { Chunk = chunk, Score = similarity });
         }
 
-        return results
-            .OrderByDescending(r => r.Score)
-            .Take(topK)
-            .ToList();
+        return results.OrderByDescending(r => r.Score).Take(topK).ToList();
     }
 
     public void RemoveDocument(string documentId) => _chunks.RemoveAll(c => c.DocumentId == documentId);
@@ -64,16 +58,14 @@ public class VectorStore
     public void SaveToDisk()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_storagePath)!);
-        var json = JsonSerializer.Serialize(_chunks, new JsonSerializerOptions
-        {
-            WriteIndented = true
-        });
+        var json = JsonSerializer.Serialize(_chunks, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(_storagePath, json);
     }
 
     private void LoadFromDisk()
     {
-        if (!File.Exists(_storagePath)) return;
+        if (!File.Exists(_storagePath))
+            return;
 
         try
         {

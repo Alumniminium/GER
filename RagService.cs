@@ -3,13 +3,23 @@ using Microsoft.Extensions.Logging;
 
 namespace GER;
 
-public class RagService(OllamaClient ollamaClient, VectorStore vectorStore, ILogger<RagService> logger, string chatModel = "qwen3:1.7b", DocumentChunker? chunker = null)
+public class RagService(
+    OllamaClient ollamaClient,
+    VectorStore vectorStore,
+    ILogger<RagService> logger,
+    string chatModel = "qwen3:1.7b",
+    DocumentChunker? chunker = null
+)
 {
     private readonly DocumentChunker _chunker = chunker ?? new DocumentChunker();
     private readonly string _chatModel = chatModel;
     private readonly List<(string DocumentId, string Text)> _usedSources = [];
 
-    public async Task<string> IndexDocumentAsync(string documentId, string content, CancellationToken cancellationToken = default)
+    public async Task<string> IndexDocumentAsync(
+        string documentId,
+        string content,
+        CancellationToken cancellationToken = default
+    )
     {
         // Remove existing document if it exists
         vectorStore.RemoveDocument(documentId);
@@ -41,7 +51,11 @@ public class RagService(OllamaClient ollamaClient, VectorStore vectorStore, ILog
         return $"Indexed document {documentId} with {chunks.Count} chunks";
     }
 
-    public async Task<List<SearchResult>> SearchAsync(string query, int topK = 5, CancellationToken cancellationToken = default)
+    public async Task<List<SearchResult>> SearchAsync(
+        string query,
+        int topK = 5,
+        CancellationToken cancellationToken = default
+    )
     {
         // Get query embedding
         var queryEmbedding = await ollamaClient.GetEmbeddingAsync(query, cancellationToken);
@@ -52,7 +66,11 @@ public class RagService(OllamaClient ollamaClient, VectorStore vectorStore, ILog
         return results;
     }
 
-    public async Task<string> RetrieveContextAsync(string query, int topK = 5, CancellationToken cancellationToken = default)
+    public async Task<string> RetrieveContextAsync(
+        string query,
+        int topK = 5,
+        CancellationToken cancellationToken = default
+    )
     {
         var results = await SearchAsync(query, topK, cancellationToken);
 
@@ -61,8 +79,8 @@ public class RagService(OllamaClient ollamaClient, VectorStore vectorStore, ILog
             return "No relevant context found.";
         }
 
-        var contextParts = results.Select((r, i) =>
-            $"[{i + 1}] (score: {r.Score:F4}, doc: {r.Chunk.DocumentId})\n{r.Chunk.Text}"
+        var contextParts = results.Select(
+            (r, i) => $"[{i + 1}] (score: {r.Score:F4}, doc: {r.Chunk.DocumentId})\n{r.Chunk.Text}"
         );
 
         return string.Join("\n\n---\n\n", contextParts);
@@ -140,7 +158,7 @@ public class RagService(OllamaClient ollamaClient, VectorStore vectorStore, ILog
             {
                 "search" => await SearchTool(query, topK, cancellationToken),
                 "retrieve_context" => await RetrieveContextAsync(query, topK, cancellationToken),
-                _ => $"Unknown tool: {functionName}"
+                _ => $"Unknown tool: {functionName}",
             };
         }
         catch (Exception ex)
@@ -160,26 +178,33 @@ public class RagService(OllamaClient ollamaClient, VectorStore vectorStore, ILog
 
             var systemPrompt = SystemPromptManager.GetSystemPrompt();
             var tools = RagTools.GetRagTools();
-            logger.LogInformation("System prompt length: {Length}, Available tools: {ToolCount}",
-                systemPrompt.Length, tools.Count);
+            logger.LogInformation(
+                "System prompt length: {Length}, Available tools: {ToolCount}",
+                systemPrompt.Length,
+                tools.Count
+            );
 
             var messages = new List<ChatMessage>
             {
                 new() { Role = "system", Content = systemPrompt },
-                new() { Role = "user", Content = query }
+                new() { Role = "user", Content = query },
             };
 
             const int maxIterations = 5;
             for (int iteration = 0; iteration < maxIterations; iteration++)
             {
-                logger.LogInformation("Iteration {Iteration}: Calling LLM with {MessageCount} messages",
-                    iteration, messages.Count);
+                logger.LogInformation(
+                    "Iteration {Iteration}: Calling LLM with {MessageCount} messages",
+                    iteration,
+                    messages.Count
+                );
 
                 var result = await ollamaClient.GenerateResponseWithToolsAsync(
                     messages,
                     _chatModel,
                     tools,
-                    cancellationToken);
+                    cancellationToken
+                );
 
                 messages.Add(result.Message!);
 
@@ -191,21 +216,23 @@ public class RagService(OllamaClient ollamaClient, VectorStore vectorStore, ILog
                     // Execute all tool calls
                     foreach (var toolCall in result.Message.ToolCalls)
                     {
-                        logger.LogInformation("Executing tool: {ToolName} with arguments: {Args}",
-                            toolCall.Function.Name, JsonSerializer.Serialize(toolCall.Function.Arguments));
+                        logger.LogInformation(
+                            "Executing tool: {ToolName} with arguments: {Args}",
+                            toolCall.Function.Name,
+                            JsonSerializer.Serialize(toolCall.Function.Arguments)
+                        );
 
                         var toolResult = await ExecuteToolCall(toolCall, cancellationToken);
-                        logger.LogInformation("Tool {ToolName} returned: {Result}",
-                            toolCall.Function.Name, toolResult.Length > 200 ? toolResult.Substring(0, 200) + "..." : toolResult);
+                        logger.LogInformation(
+                            "Tool {ToolName} returned: {Result}",
+                            toolCall.Function.Name,
+                            toolResult.Length > 200 ? toolResult.Substring(0, 200) + "..." : toolResult
+                        );
 
                         // Track document sources mentioned in search/retrieve_context results
                         TrackSourcesFromToolResult(toolResult);
 
-                        messages.Add(new ChatMessage
-                        {
-                            Role = "tool",
-                            Content = toolResult
-                        });
+                        messages.Add(new ChatMessage { Role = "tool", Content = toolResult });
                     }
                     continue; // Continue the loop to get final response
                 }
@@ -235,6 +262,7 @@ public class RagService(OllamaClient ollamaClient, VectorStore vectorStore, ILog
             return $"Error processing query: {ex.Message}";
         }
     }
+
     public static int GetIntFromArgument(Dictionary<string, object> arguments, string key, int defaultValue)
     {
         if (!arguments.TryGetValue(key, out var value))
@@ -244,11 +272,15 @@ public class RagService(OllamaClient ollamaClient, VectorStore vectorStore, ILog
         {
             JsonElement je => je.GetInt32(),
             int i => i,
-            _ => Convert.ToInt32(value)
+            _ => Convert.ToInt32(value),
         };
     }
 
-    public static string GetStringFromArgument(Dictionary<string, object> arguments, string key, string defaultValue = "")
+    public static string GetStringFromArgument(
+        Dictionary<string, object> arguments,
+        string key,
+        string defaultValue = ""
+    )
     {
         if (!arguments.TryGetValue(key, out var value))
             return defaultValue;
@@ -257,7 +289,7 @@ public class RagService(OllamaClient ollamaClient, VectorStore vectorStore, ILog
         {
             JsonElement je => je.GetString() ?? defaultValue,
             string s => s,
-            _ => value.ToString() ?? defaultValue
+            _ => value.ToString() ?? defaultValue,
         };
     }
 }
